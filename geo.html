@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Фото с координатами</title>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 30px 16px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 420px;
+      background: #ffffff;
+      border-radius: 24px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .title {
+      font-size: 1.9rem;
+      font-weight: 800;
+      margin-bottom: 0;
+      color: #166534;
+      text-align: center;
+    }
+    
+    .subtitle {
+      font-size: 1.1rem;
+      color: #4b5563;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+
+    .btn {
+      margin: 12px 0;
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 14px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: 0.2s;
+      text-align: center;
+    }
+    
+    .primary-btn {
+      background: #166534;
+      color: white;
+      box-shadow: 0 4px 12px rgba(22,101,52,0.35);
+    }
+
+    .primary-btn:hover {
+      background: #14532d;
+      transform: translateY(-2px);
+    }
+    
+    .location-btn {
+      background: #3b82f6;
+      color: white;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+    }
+    
+    .location-btn:hover {
+      background: #2563eb;
+      transform: translateY(-2px);
+    }
+    
+    .status {
+      margin: 20px 0;
+      padding: 12px;
+      border-radius: 12px;
+      text-align: center;
+      font-weight: 500;
+      width: 100%;
+    }
+    
+    .status.pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .status.success {
+      background: #dcfce7;
+      color: #15803d;
+    }
+    
+    .status.error {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .preview {
+      width: 100%;
+      margin-top: 24px;
+      border-radius: 16px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .preview img {
+      width: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .coordinates-box {
+      margin-top: 24px;
+      width: 100%;
+      background: #f0f9ff;
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: inset 0 0 0 1px #bae6fd;
+      display: none;
+    }
+
+    .coordinates-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #075985;
+    }
+
+    .coordinates-text {
+      font-size: 1rem;
+      color: #1e40af;
+      font-weight: 500;
+    }
+
+    .loader {
+      margin-top: 24px;
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e5e7eb;
+      border-top: 4px solid #166534;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: none;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .manual-coords {
+      margin-top: 20px;
+      width: 100%;
+      display: none;
+    }
+
+    .manual-coords input {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    
+    .instructions {
+      background: #dbeafe;
+      padding: 15px;
+      border-radius: 12px;
+      margin: 20px 0;
+      font-size: 0.95rem;
+      color: #1e40af;
+    }
+    
+    .warning {
+      background: #ffedd5;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 15px 0;
+      color: #c2410c;
+      font-size: 0.9rem;
+    }
+    
+    .container {
+      width: 100%;
+    }
+    
+    #camera-input { display: none; }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="title">Фото с координатами</div>
+    <div class="subtitle">Сначала получите координаты, затем сделайте фото</div>
+    
+    <div class="warning" id="security-warning">
+      Для работы геолокации страница должна быть открыта через HTTPS или на localhost
+    </div>
+
+    <div class="container">
+      <button class="btn location-btn" id="get-location-btn">Получить координаты</button>
+      
+      <div class="status pending" id="location-status">
+        Нажмите кнопку выше, чтобы разрешить доступ к местоположению
+      </div>
+      
+      <div class="instructions" id="instructions">
+        Разрешите доступ к местоположению при появлении запроса в браузере. Это требуется для определения координат.
+      </div>
+      
+      <div class="loader" id="location-loader"></div>
+      
+      <button class="btn primary-btn" id="capture-btn" disabled>Сфотографировать</button>
+      
+      <input 
+        type="file"
+        accept="image/*"
+        capture="environment"
+        id="camera-input"
+      />
+      
+      <div class="preview" id="preview">
+        <img id="preview-img" />
+      </div>
+      
+      <div class="coordinates-box" id="coordinates-box">
+        <div class="coordinates-title">Ваши координаты:</div>
+        <div class="coordinates-text" id="coordinates-text"></div>
+      </div>
+      
+      <div class="manual-coords" id="manual-coords">
+        <div class="coordinates-title">Указать координаты вручную</div>
+        <input type="text" id="latitude" placeholder="Широта (например, 55.7558)" />
+        <input type="text" id="longitude" placeholder="Долгота (например, 37.6176)" />
+        <button class="btn primary-btn" id="save-coords">Сохранить координаты</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const getLocationBtn = document.getElementById("get-location-btn");
+const captureBtn = document.getElementById("capture-btn");
+const cameraInput = document.getElementById("camera-input");
+const preview = document.getElementById("preview");
+const previewImg = document.getElementById("preview-img");
+const coordinatesBox = document.getElementById("coordinates-box");
+const coordinatesText = document.getElementById("coordinates-text");
+const locationStatus = document.getElementById("location-status");
+const locationLoader = document.getElementById("location-loader");
+const instructions = document.getElementById("instructions");
+const securityWarning = document.getElementById("security-warning");
+const manualCoords = document.getElementById("manual-coords");
+const saveCoordsBtn = document.getElementById("save-coords");
+const latitudeInput = document.getElementById("latitude");
+const longitudeInput = document.getElementById("longitude");
+
+let userCoordinates = null;
+let isSecureContext = window.isSecureContext || window.location.hostname === 'localhost';
+
+// Проверка безопасного контекста при загрузке
+document.addEventListener('DOMContentLoaded', () => {
+  if (!isSecureContext) {
+    securityWarning.style.display = 'block';
+    locationStatus.className = 'status error';
+    locationStatus.textContent = 'Геолокация недоступна: требуется HTTPS или localhost';
+    instructions.style.display = 'none';
+    getLocationBtn.disabled = true;
+  }
+});
+
+// Запрос геолокации при нажатии кнопки
+getLocationBtn.addEventListener("click", async () => {
+  if (!navigator.geolocation) {
+    updateLocationStatus("Геолокация не поддерживается вашим браузером", "error");
+    return;
+  }
+
+  locationLoader.style.display = "block";
+  getLocationBtn.disabled = true;
+  locationStatus.className = 'status pending';
+  locationStatus.textContent = "Запрашиваем доступ к местоположению...";
+  instructions.style.display = 'none';
+
+  try {
+    const coords = await requestGeolocation();
+    userCoordinates = coords;
+    updateLocationStatus(`Координаты получены!`, "success");
+    captureBtn.disabled = false;
+  } catch (error) {
+    updateLocationStatus(error, "error");
+    showManualCoordsOption();
+  } finally {
+    locationLoader.style.display = "none";
+    getLocationBtn.disabled = false;
+  }
+});
+
+// Сделать фото
+captureBtn.addEventListener("click", () => {
+  if (!userCoordinates) {
+    alert("Сначала получите координаты!");
+    return;
+  }
+  cameraInput.click();
+});
+
+cameraInput.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    previewImg.src = reader.result;
+    preview.style.display = "block";
+    
+    // Показываем координаты
+    showCoordinates(userCoordinates);
+  };
+
+  reader.readAsDataURL(file);
+});
+
+// Сохранить координаты, введенные вручную
+saveCoordsBtn.addEventListener("click", () => {
+  const lat = latitudeInput.value.trim();
+  const lng = longitudeInput.value.trim();
+  
+  if (!lat || !lng) {
+    alert("Пожалуйста, заполните оба поля координат");
+    return;
+  }
+  
+  const latNum = parseFloat(lat);
+  const lngNum = parseFloat(lng);
+  
+  if (isNaN(latNum) || isNaN(lngNum)) {
+    alert("Неверный формат координат. Используйте числа.");
+    return;
+  }
+  
+  if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) {
+    alert("Неверный диапазон координат. Широта от -90 до 90, долгота от -180 до 180.");
+    return;
+  }
+  
+  userCoordinates = { latitude: latNum, longitude: lngNum };
+  showCoordinates(userCoordinates);
+  manualCoords.style.display = "none";
+  captureBtn.disabled = false;
+});
+
+// Функция запроса геолокации
+function requestGeolocation() {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        resolve({ latitude, longitude });
+      },
+      (error) => {
+        let message = "Ошибка получения координат: ";
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            message += "Доступ к местоположению был запрещен. Разрешите доступ в настройках браузера.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            message += "Информация о местоположении недоступна.";
+            break;
+          case error.TIMEOUT:
+            message += "Превышено время ожидания.";
+            break;
+          default:
+            message += "Произошла неизвестная ошибка.";
+        }
+        reject(message);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  });
+}
+
+// Обновление статуса геолокации
+function updateLocationStatus(message, statusClass) {
+  locationStatus.className = `status ${statusClass}`;
+  locationStatus.textContent = message;
+}
+
+// Показать координаты
+function showCoordinates(coords) {
+  coordinatesText.textContent = `Широта: ${coords.latitude.toFixed(6)}, Долгота: ${coords.longitude.toFixed(6)}`;
+  coordinatesBox.style.display = "block";
+}
+
+// Показать опцию ручного ввода координат
+function showManualCoordsOption() {
+  manualCoords.style.display = "block";
+  getLocationBtn.disabled = false;
+  locationStatus.textContent = "Или укажите координаты вручную";
+  locationStatus.className = "status pending";
+}
+</script>
+
+</body>
+</html>
